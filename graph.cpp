@@ -29,6 +29,8 @@ GLint uniform_mytexture;
 
 GLint uniform_sprite;
 
+glm::vec3 uniform_vertices[101*101];
+
 int sprite_mode{0};
 
 float offset_x = 0.0;
@@ -41,91 +43,58 @@ bool rotate = false;
 
 GLuint vbo[2];
 
-int init_resources(glm::vec3 vertices[101][101]) {
+int init_resources(glm::vec3 vertices[101*101]) {
 	program = create_program("graph.v.glsl", "graph.f.glsl");
 	if (program == 0)
 		return 0;
 
+
+
 	attribute_coord2d = get_attrib(program, "coord2d");
 	uniform_vertex_transform = get_uniform(program, "vertex_transform");
 	uniform_sprite = get_uniform(program, "sprite");
-	uniform_mytexture = get_uniform(program, "mytexture");
+	// uniform_mytexture = get_uniform(program, "mytexture");
 
-	if (attribute_coord2d == -1 || uniform_vertex_transform == -1 || uniform_mytexture == -1)
+	if (attribute_coord2d == -1 || uniform_vertex_transform == -1 )
 		return 0;
 
 
+	glm::vec3 cross_points[101*101*4];
+
+	for (auto i=0; i < 101*101; i+=1) {
+		uniform_vertices[i] = vertices[i];
+		// cross_points[i*4].x = vertices[i].x+.01;
+		// cross_points[i*4].y = vertices[i].y;
+		// cross_points[i*4].z = vertices[i].z;
+
+		// cross_points[i*4+1].x = vertices[i].x-.01;
+		// cross_points[i*4+1].y = vertices[i].y;
+		// cross_points[i*4+1].z = vertices[i].z;
+
+		// cross_points[i*4+2].x = vertices[i].x;
+		// cross_points[i*4+2].y = vertices[i].y;
+		// cross_points[i*4+2].z = vertices[i].z+.01;
+
+		// cross_points[i*4+3].x = vertices[i].x;
+		// cross_points[i*4+3].y = vertices[i].y;
+		// cross_points[i*4+3].z = vertices[i].z-.01;		
+	}
+
 
 	/* Enable point sprites (not necessary for true OpenGL ES 2.0) */
-#ifndef GL_ES_VERSION_2_0
-	glEnable(GL_POINT_SPRITE);
-	glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
-#endif
+	#ifndef GL_ES_VERSION_2_0
+		glEnable(GL_POINT_SPRITE);
+		glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+	#endif
 
-
-
-	/* Upload the texture for our point sprites */
-	glActiveTexture(GL_TEXTURE0);
-	glGenTextures(1, &texture_id);
-	glBindTexture(GL_TEXTURE_2D, texture_id);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, plus_sprite.width, plus_sprite.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, plus_sprite.pixel_data);
-
-
-	/* Upload the texture for our point sprites */
-	glActiveTexture(GL_TEXTURE1);
-	glGenTextures(1, &texture_id2);
-	glBindTexture(GL_TEXTURE_2D, texture_id2);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, cross_sprite.width, cross_sprite.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, cross_sprite.pixel_data);
-
-	/* Upload the texture for our point sprites */
-	glActiveTexture(GL_TEXTURE2);
-	glGenTextures(1, &texture_id3);
-	glBindTexture(GL_TEXTURE_2D, texture_id3);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, circle_sprite.width, circle_sprite.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, circle_sprite.pixel_data);
-
-	/* Upload the texture for our point sprites */
-	glActiveTexture(GL_TEXTURE3);
-	glGenTextures(1, &texture_id4);
-	glBindTexture(GL_TEXTURE_2D, texture_id4);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, heart_sprite.width, heart_sprite.height, 0, GL_RGBA, GL_UNSIGNED_BYTE, heart_sprite.pixel_data);
-
+glm::vec3 c_test[101*101];
 	// Create two vertex buffer objects
-	glGenBuffers(2, vbo);
-
-	glm::vec3 vertices2[101][101];
+	glGenBuffers(1, vbo);
 
 	// Tell OpenGL to copy our array to the buffer objects
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof vertices2, vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof cross_points, cross_points, GL_STATIC_DRAW);
 
-	// Create an array of indices into the vertex array that traces both horizontal and vertical lines
-	GLushort indices[100 * 101 * 4];
-	int i = 0;
-
-	for (int y = 0; y < 101; y++) {
-		for (int x = 0; x < 100; x++) {
-			indices[i++] = y * 101 + x;
-			indices[i++] = y * 101 + x + 1;
-		}
-	}
-
-	for (int x = 0; x < 101; x++) {
-		for (int y = 0; y < 100; y++) {
-			indices[i++] = y * 101 + x;
-			indices[i++] = (y + 1) * 101 + x;
-		}
-	}
-
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof indices, indices, GL_STATIC_DRAW);
 
 	return 1;
 }
@@ -137,15 +106,70 @@ void display() {
 	glm::mat4 model;
 	glm::mat4 view;
 
-	if (rotate)
-		// model = glm::rotate(glm::mat4(1.0f), glm::radians(glutGet(GLUT_ELAPSED_TIME) / 100.0f), glm::vec3(0.0f, 0.0f, 1.0f));
-		view = glm::lookAt(glm::vec3(sin(glutGet(GLUT_ELAPSED_TIME) / 1000.0f)*2.0, cos(glutGet(GLUT_ELAPSED_TIME) / 1000.0f)*2.0f, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+	float angle = 0.0f;
 
-	else
+	if (rotate) {
+		// model = glm::rotate(glm::mat4(1.0f), glm::radians(glutGet(GLUT_ELAPSED_TIME) / 100.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
+		view = glm::lookAt(glm::vec3(sin(angle)*2.0, cos(angle)*2.0f, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+	} else {
 		//  model = glm::mat4(1.0f);
 		view = glm::lookAt(glm::vec3(0.0, 2.0, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+	}
 
  model = glm::mat4(1.0f);
+
+glm::vec3 cross_points[101*101*4];
+	for (auto i=0; i < 101*101; i+=1) {
+		cross_points[i*4].x = uniform_vertices[i].x+cos(-angle)*.01;
+		cross_points[i*4].y = uniform_vertices[i].y+sin(-angle)*.01;
+		cross_points[i*4].z = uniform_vertices[i].z;
+
+		cross_points[i*4+1].x = uniform_vertices[i].x-cos(-angle)*.01;
+		cross_points[i*4+1].y = uniform_vertices[i].y-sin(-angle)*.01;
+		cross_points[i*4+1].z = uniform_vertices[i].z;
+
+		cross_points[i*4+2].x = uniform_vertices[i].x;
+		cross_points[i*4+2].y = uniform_vertices[i].y;
+		cross_points[i*4+2].z = uniform_vertices[i].z+.01/cos(.7071);
+
+		cross_points[i*4+3].x = uniform_vertices[i].x;
+		cross_points[i*4+3].y = uniform_vertices[i].y;
+		cross_points[i*4+3].z = uniform_vertices[i].z-.01/cos(.7071);		
+	}
+
+glm::vec3 six_points[101*101*6];
+	for (auto i=0; i < 101*101; i+=1) {
+		six_points[i*6].x = uniform_vertices[i].x+.01;
+		six_points[i*6].y = uniform_vertices[i].y;
+		six_points[i*6].z = uniform_vertices[i].z;
+
+		six_points[i*6+1].x = uniform_vertices[i].x-.01;
+		six_points[i*6+1].y = uniform_vertices[i].y;
+		six_points[i*6+1].z = uniform_vertices[i].z;
+
+		six_points[i*6+2].x = uniform_vertices[i].x;
+		six_points[i*6+2].y = uniform_vertices[i].y+.01;
+		six_points[i*6+2].z = uniform_vertices[i].z;
+
+		six_points[i*6+3].x = uniform_vertices[i].x;
+		six_points[i*6+3].y = uniform_vertices[i].y-.01;
+		six_points[i*6+3].z = uniform_vertices[i].z;		
+
+		six_points[i*6+4].x = uniform_vertices[i].x;
+		six_points[i*6+4].y = uniform_vertices[i].y;
+		six_points[i*6+4].z = uniform_vertices[i].z+.01;
+
+		six_points[i*6+5].x = uniform_vertices[i].x;
+		six_points[i*6+5].y = uniform_vertices[i].y;
+		six_points[i*6+5].z = uniform_vertices[i].z-.01;
+
+	}
+
+	// Tell OpenGL to copy our array to the buffer objects
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof six_points, six_points, GL_STATIC_DRAW);
+
 
 	// glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f * 640 / 480, 0.1f, 10.0f);
@@ -166,12 +190,12 @@ void display() {
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glVertexAttribPointer(attribute_coord2d, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbo[1]);
-	// glDrawElements(GL_LINES, 100 * 101 * 4, GL_UNSIGNED_SHORT, 0);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	glDrawArrays(GL_LINES, 0, 101 * 101 * 6);
 
 
-	glUniform1f(uniform_sprite, plus_sprite.width);
-	glDrawElements(GL_POINTS, 100 * 101 * 4, GL_UNSIGNED_SHORT, 0);
+	// glUniform1f(uniform_sprite, plus_sprite.width);
+	// glDrawElements(GL_POINTS, 100 * 101 * 4, GL_UNSIGNED_SHORT, 0);
 
 	/* Stop using the vertex buffer object */
 	glDisableVertexAttribArray(attribute_coord2d);
@@ -186,6 +210,7 @@ void special(int key, int x, int y) {
 	case GLUT_KEY_F1:
 		sprite_mode = 0;
 		printf("Using sprint 0\n");
+		exit(0);
 		break;
 	case GLUT_KEY_F2:
 		sprite_mode = 1;
@@ -226,6 +251,7 @@ void special(int key, int x, int y) {
 		offset_y = 0.0;
 		scale = 1.0;
 		break;
+	// case GLUT_KEY_
 	}
 
 	glutPostRedisplay();
@@ -257,7 +283,7 @@ void init_plotting(int argc, char *argv[]) {
 }
 
 
-void plot(glm::vec3 verticies[101][101]) {
+void plot(glm::vec3 verticies[101*101]) {
 
 
 	GLint max_units;

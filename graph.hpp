@@ -10,6 +10,6 @@
 #define GRAPH_HPP
 
 void init_plotting(int argc, char *argv[]);
-void plot(glm::vec3 vertices[101][101]);
+void plot(glm::vec3 vertices[101*101]);
 
 #endif
