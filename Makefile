@@ -1,6 +1,6 @@
 LDLIBS=-lm -lglut -lGLEW -lGL
-all: graph
+all: example_1
 clean:
-	rm -f *.o graph
-graph: ./shader_utils/shader_utils.o
+	rm -f *.o example_1
+example_1: ./shader_utils/shader_utils.o graph.cpp
 .PHONY: all clean

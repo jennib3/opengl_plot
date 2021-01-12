@@ -41,7 +41,7 @@ bool rotate = false;
 
 GLuint vbo[2];
 
-int init_resources() {
+int init_resources(glm::vec3 vertices[101][101]) {
 	program = create_program("graph.v.glsl", "graph.f.glsl");
 	if (program == 0)
 		return 0;
@@ -54,8 +54,7 @@ int init_resources() {
 	if (attribute_coord2d == -1 || uniform_vertex_transform == -1 || uniform_mytexture == -1)
 		return 0;
 
-	// Create our datapoints, store it as bytes
-#define N 100
+
 
 	/* Enable point sprites (not necessary for true OpenGL ES 2.0) */
 #ifndef GL_ES_VERSION_2_0
@@ -101,26 +100,11 @@ int init_resources() {
 	// Create two vertex buffer objects
 	glGenBuffers(2, vbo);
 
-	// Create an array for 101 * 101 vertices
-	glm::vec3 vertices[101][101];
-
-	for (int i = 0; i < 101; i++) {
-		for (int j = 0; j < 101; j++) {
-			vertices[i][j].x = (j - 50) / 50.0;
-			vertices[i][j].y = (i - 50) / 50.0;
-
-			float x = (i - N / 2) / (N / 2.0);
-			float y = (j - N / 2) / (N / 2.0);
-			float d = hypotf(x, y) * 4.0;
-			float z = (1 - d * d) * expf(d * d / -2.0);
-
-			vertices[i][j].z = z;
-		}
-	}
+	glm::vec3 vertices2[101][101];
 
 	// Tell OpenGL to copy our array to the buffer objects
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof vertices, vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof vertices2, vertices, GL_STATIC_DRAW);
 
 	// Create an array of indices into the vertex array that traces both horizontal and vertical lines
 	GLushort indices[100 * 101 * 4];
@@ -151,14 +135,19 @@ void display() {
 	glUniform1i(uniform_mytexture, sprite_mode);
 
 	glm::mat4 model;
+	glm::mat4 view;
 
 	if (rotate)
-		model = glm::rotate(glm::mat4(1.0f), glm::radians(glutGet(GLUT_ELAPSED_TIME) / 100.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		// model = glm::rotate(glm::mat4(1.0f), glm::radians(glutGet(GLUT_ELAPSED_TIME) / 100.0f), glm::vec3(0.0f, 0.0f, 1.0f));
+		view = glm::lookAt(glm::vec3(sin(glutGet(GLUT_ELAPSED_TIME) / 1000.0f)*2.0, cos(glutGet(GLUT_ELAPSED_TIME) / 1000.0f)*2.0f, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
 
 	else
-		model = glm::mat4(1.0f);
+		//  model = glm::mat4(1.0f);
+		view = glm::lookAt(glm::vec3(0.0, 2.0, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
 
-	glm::mat4 view = glm::lookAt(glm::vec3(0.0, -2.0, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+ model = glm::mat4(1.0f);
+
+	// glm::mat4 view = glm::lookAt(glm::vec3(0.0, 2.0, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
 	glm::mat4 projection = glm::perspective(45.0f, 1.0f * 640 / 480, 0.1f, 10.0f);
 
 	glm::mat4 vertex_transform = projection * view * model;
@@ -167,8 +156,9 @@ void display() {
 	glUniformMatrix4fv(uniform_vertex_transform, 1, GL_FALSE, glm::value_ptr(vertex_transform));
 	// glUniformMatrix4fv(uniform_texture_transform, 1, GL_FALSE, glm::value_ptr(texture_transform));
 
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-	glClear(GL_COLOR_BUFFER_BIT);
+	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
+	glClearDepth(10.0f);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	/* Draw the grid using the indices to our vertices using our vertex buffer objects */
 	glEnableVertexAttribArray(attribute_coord2d);
@@ -245,9 +235,11 @@ void free_resources() {
 	glDeleteProgram(program);
 }
 
-int main(int argc, char *argv[]) {
+
+void init_plotting(int argc, char *argv[]) {
+
 	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE);
+	glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(640, 480);
 	glutCreateWindow("My Graph");
 
@@ -255,36 +247,41 @@ int main(int argc, char *argv[]) {
 
 	if (GLEW_OK != glew_status) {
 		fprintf(stderr, "Error: %s\n", glewGetErrorString(glew_status));
-		return 1;
+		exit(1);
 	}
 
 	if (!GLEW_VERSION_2_0) {
 		fprintf(stderr, "No support for OpenGL 2.0 found\n");
-		return 1;
+		exit(1);
 	}
+}
+
+
+void plot(glm::vec3 verticies[101][101]) {
+
 
 	GLint max_units;
 
 	glGetIntegerv(GL_MAX_VERTEX_TEXTURE_IMAGE_UNITS, &max_units);
 	if (max_units < 1) {
 		fprintf(stderr, "Your GPU does not have any vertex texture image units\n");
-		return 1;
+		exit(-1);
 	}
 
-	printf("Use left/right/up/down to move.\n");
-	printf("Use pageup/pagedown to change the horizontal scale.\n");
-	printf("Press home to reset the position and scale.\n");
-	printf("Press F1 to toggle interpolation.\n");
-	printf("Press F2 to toggle clamping.\n");
-	printf("Press F3 to toggle rotation.\n");
 
-	if (init_resources()) {
+	if (init_resources(verticies)) {
 
 		// Transparency for sprites
 		glEnable(GL_BLEND);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		glEnable(GL_POINT_SPRITE);
 		glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
+
+		// Depth stuff
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_TRUE);
+		glDepthFunc(GL_LEQUAL);
+		glDepthRange(0.0f, 10.0f);
 
 
 		glutDisplayFunc(display);
@@ -294,5 +291,5 @@ int main(int argc, char *argv[]) {
 	}
 
 	free_resources();
-	return 0;
+
 }
