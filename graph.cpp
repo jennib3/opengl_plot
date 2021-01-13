@@ -17,6 +17,8 @@
 #include "./sprites/circle.c"
 #include "./sprites/heart.c"
 
+#include "update.hpp"
+
 GLuint program;
 GLint attribute_coord2d;
 GLint uniform_vertex_transform;
@@ -97,6 +99,12 @@ glm::vec3 c_test[101*101];
 
 
 	return 1;
+}
+
+void update_display(glm::vec3 vertices[101*101]) {
+	for (auto i=0; i < 101*101; i+=1) {
+		uniform_vertices[i] = vertices[i];
+	}
 }
 
 void display() {
@@ -311,7 +319,7 @@ void plot(glm::vec3 verticies[101*101]) {
 
 
 		glutDisplayFunc(display);
-		glutIdleFunc(display);
+		glutIdleFunc(update_data);
 		glutSpecialFunc(special);
 		glutMainLoop();
 	}
