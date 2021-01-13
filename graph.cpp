@@ -18,6 +18,7 @@
 #include "./sprites/heart.c"
 
 #include "update.hpp"
+#include "graph.hpp"
 
 GLuint program;
 GLint attribute_coord2d;
@@ -42,6 +43,12 @@ float scale = 1.0;
 bool interpolate = false;
 bool clamp = false;
 bool rotate = false;
+
+float h_distance(glm::vec3 camera_position, glm::vec3 camera_look_at) {
+
+    return sqrt( pow(camera_position.x - camera_look_at.x, 2) + 
+                 pow(camera_position.y - camera_look_at.y, 2));
+}
 
 GLuint vbo[2];
 
@@ -107,6 +114,11 @@ void update_display(glm::vec3 vertices[101*101]) {
 	}
 }
 
+
+glm::vec3 camera_pos(0.0f, 2.0f, 2.0f);
+
+glm::vec3 camera_look(0.0f, 0.0f, 0.0f);
+
 void display() {
 	glUseProgram(program);
 	glUniform1i(uniform_mytexture, sprite_mode);
@@ -119,10 +131,10 @@ void display() {
 	if (rotate) {
 		// model = glm::rotate(glm::mat4(1.0f), glm::radians(glutGet(GLUT_ELAPSED_TIME) / 100.0f), glm::vec3(0.0f, 0.0f, 1.0f));
 		angle = glutGet(GLUT_ELAPSED_TIME) / 1000.0f;
-		view = glm::lookAt(glm::vec3(sin(angle)*2.0, cos(angle)*2.0f, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+		view = glm::lookAt(glm::vec3(sin(angle)*2.0, cos(angle)*2.0f, 2.0), glm::vec3(camera_look.x, camera_look.y, camera_look.z), glm::vec3(0.0, 0.0, 1.0));
 	} else {
 		//  model = glm::mat4(1.0f);
-		view = glm::lookAt(glm::vec3(0.0, 2.0, 2.0), glm::vec3(0.0, 0.0, 0.0), glm::vec3(0.0, 0.0, 1.0));
+		view = glm::lookAt(glm::vec3(camera_pos.x, camera_pos.y, camera_pos.z), glm::vec3(camera_look.x, camera_look.y, camera_look.z), glm::vec3(0.0, 0.0, 1.0));
 	}
 
  model = glm::mat4(1.0f);
@@ -291,6 +303,67 @@ void init_plotting(int argc, char *argv[]) {
 }
 
 
+// Capture the start x,y positions so we can calculate camera motion
+bool camera_enabled{false};
+int x_start;
+int y_start;
+void mouse(int button, int state, int x, int y) {
+
+	if (button == GLUT_LEFT_BUTTON) {
+
+		if (state == GLUT_DOWN)   {
+
+			x_start = x;
+			y_start = y;
+			camera_enabled = true;
+
+		} else if (state == GLUT_UP) {
+
+			camera_enabled = false;
+
+		}
+
+	}
+
+}
+
+float camera_vertical_delta{0.0f};
+float camera_horizontal_delta{0.0f};
+void motion(int x, int y) {
+
+	if (camera_enabled) {
+		
+		camera_vertical_delta = (y_start - y) / 50.0f;
+		camera_horizontal_delta = (x_start - x) / 50.0f;
+
+// printf("%f %f\n", camera_vertical_delta, camera_horizontal_delta);
+
+		float radius = distance(camera_pos, camera_look);
+		float horizontal_radius = h_distance(camera_pos, camera_look);
+
+
+		float azimuth = atan2(camera_pos.y - camera_look.y, camera_pos.x - camera_look.x);
+		float elevation = atan2( (camera_pos.z - camera_look.z) , horizontal_radius);
+
+		azimuth += camera_horizontal_delta;
+		elevation += camera_vertical_delta;
+
+
+		camera_pos.x = cos(azimuth)*(radius*cos(elevation)) + camera_look.x;
+		camera_pos.y = sin(azimuth)*(radius*cos(elevation)) + camera_look.y;
+		camera_pos.z = sin(elevation)*radius + camera_look.z;
+
+		x_start = x;
+		y_start = y;
+
+	} else {
+		camera_horizontal_delta = 0.0f;
+		camera_vertical_delta = 0.0f;
+	}
+
+}
+
+
 void plot(glm::vec3 verticies[101*101]) {
 
 
@@ -321,6 +394,11 @@ void plot(glm::vec3 verticies[101*101]) {
 		glutDisplayFunc(display);
 		glutIdleFunc(update_data);
 		glutSpecialFunc(special);
+
+
+		glutMouseFunc(mouse);
+		glutMotionFunc(motion);
+
 		glutMainLoop();
 	}
 

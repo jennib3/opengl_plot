@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
 void update_data() {
 
 
+	// We can use glutGet(GLUT_ELAPSED_TIME) to change update rate
 	float scaling = sin(glutGet(GLUT_ELAPSED_TIME) / 1000.0f);
 
 	glm::vec3 vertices[101*101];
