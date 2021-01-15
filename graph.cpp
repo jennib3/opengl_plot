@@ -21,18 +21,12 @@
 #include "graph.hpp"
 
 GLuint program;
-GLint attribute_coord2d;
+GLint attribute_coord3d;
 GLint uniform_vertex_transform;
-GLuint texture_id;
-GLuint texture_id2;
-GLuint texture_id3;
-GLuint texture_id4;
+GLint uniform_v_color;
 
-GLint uniform_mytexture;
-
-GLint uniform_sprite;
-
-glm::vec3 uniform_vertices[101*101];
+glm::vec3 uniform_vertices[MAX_NUM_POINTS];
+glm::vec4 uniform_color[MAX_NUM_POINTS];
 
 int sprite_mode{0};
 
@@ -52,42 +46,24 @@ float h_distance(glm::vec3 camera_position, glm::vec3 camera_look_at) {
 
 GLuint vbo[2];
 
-int init_resources(glm::vec3 vertices[101*101]) {
+int init_resources(std::vector<glm::vec3> vertices, std::vector<glm::vec4> v_color) {
 	program = create_program("graph.v.glsl", "graph.f.glsl");
 	if (program == 0)
 		return 0;
 
 
 
-	attribute_coord2d = get_attrib(program, "coord2d");
+	attribute_coord3d = get_attrib(program, "coord2d");
 	uniform_vertex_transform = get_uniform(program, "vertex_transform");
-	uniform_sprite = get_uniform(program, "sprite");
-	// uniform_mytexture = get_uniform(program, "mytexture");
+	uniform_v_color = get_attrib(program, "v_color");
 
-	if (attribute_coord2d == -1 || uniform_vertex_transform == -1 )
+	if (attribute_coord3d == -1 || uniform_vertex_transform == -1 || uniform_v_color == -1)
 		return 0;
 
 
-	glm::vec3 cross_points[101*101*4];
+	// glm::vec3 cross_points[MAX_NUM_POINTS*4];
 
-	for (auto i=0; i < 101*101; i+=1) {
-		uniform_vertices[i] = vertices[i];
-		// cross_points[i*4].x = vertices[i].x+.01;
-		// cross_points[i*4].y = vertices[i].y;
-		// cross_points[i*4].z = vertices[i].z;
-
-		// cross_points[i*4+1].x = vertices[i].x-.01;
-		// cross_points[i*4+1].y = vertices[i].y;
-		// cross_points[i*4+1].z = vertices[i].z;
-
-		// cross_points[i*4+2].x = vertices[i].x;
-		// cross_points[i*4+2].y = vertices[i].y;
-		// cross_points[i*4+2].z = vertices[i].z+.01;
-
-		// cross_points[i*4+3].x = vertices[i].x;
-		// cross_points[i*4+3].y = vertices[i].y;
-		// cross_points[i*4+3].z = vertices[i].z-.01;		
-	}
+	update_display(vertices, v_color);
 
 
 	/* Enable point sprites (not necessary for true OpenGL ES 2.0) */
@@ -96,32 +72,50 @@ int init_resources(glm::vec3 vertices[101*101]) {
 		glEnable(GL_VERTEX_PROGRAM_POINT_SIZE);
 	#endif
 
-glm::vec3 c_test[101*101];
 	// Create two vertex buffer objects
-	glGenBuffers(1, vbo);
+	glGenBuffers(2, vbo);
 
 	// Tell OpenGL to copy our array to the buffer objects
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof cross_points, cross_points, GL_STATIC_DRAW);
+	// glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
+	// glBufferData(GL_ARRAY_BUFFER, sizeof cross_points, cross_points, GL_STATIC_DRAW);
 
 
 	return 1;
 }
 
-void update_display(glm::vec3 vertices[101*101]) {
-	for (auto i=0; i < 101*101; i+=1) {
-		uniform_vertices[i] = vertices[i];
+
+uint num_loaded_points{0};
+
+void update_display(std::vector<glm::vec3> vertices) {
+	std::vector<glm::vec4> v_color;
+
+	for (auto i=0; i < vertices.size(); ++i) {
+		glm::vec4 boring_color(1,1,1,1);
+
+		v_color.push_back(boring_color);
 	}
+
+	update_display(vertices, v_color);
+
+}
+
+void update_display(std::vector<glm::vec3> vertices, std::vector<glm::vec4> v_color) {
+	for (auto i=0; i < vertices.size(); i+=1) {
+		uniform_vertices[i] = vertices[i];
+		uniform_color[i] = v_color[i];
+	}
+	num_loaded_points = vertices.size();
 }
 
 
-glm::vec3 camera_pos(0.0f, 2.0f, 2.0f);
+glm::vec3 reset_camera_pos(0.0f, 2.0f, 2.0f);
+glm::vec3 reset_camera_look(0.0f, 0.0f, 0.0f);
 
+glm::vec3 camera_pos(0.0f, 2.0f, 2.0f);
 glm::vec3 camera_look(0.0f, 0.0f, 0.0f);
 
 void display() {
 	glUseProgram(program);
-	glUniform1i(uniform_mytexture, sprite_mode);
 
 	glm::mat4 model;
 	glm::mat4 view;
@@ -137,52 +131,42 @@ void display() {
 		view = glm::lookAt(glm::vec3(camera_pos.x, camera_pos.y, camera_pos.z), glm::vec3(camera_look.x, camera_look.y, camera_look.z), glm::vec3(0.0, 0.0, 1.0));
 	}
 
- model = glm::mat4(1.0f);
+ 	model = glm::mat4(1.0f);
 
-glm::vec3 cross_points[101*101*4];
-	for (auto i=0; i < 101*101; i+=1) {
-		cross_points[i*4].x = uniform_vertices[i].x+cos(-angle)*.01;
-		cross_points[i*4].y = uniform_vertices[i].y+sin(-angle)*.01;
-		cross_points[i*4].z = uniform_vertices[i].z;
 
-		cross_points[i*4+1].x = uniform_vertices[i].x-cos(-angle)*.01;
-		cross_points[i*4+1].y = uniform_vertices[i].y-sin(-angle)*.01;
-		cross_points[i*4+1].z = uniform_vertices[i].z;
+	glm::vec3 six_points[MAX_NUM_POINTS*6];
+	glm::vec4 six_points_color[MAX_NUM_POINTS*6];
 
-		cross_points[i*4+2].x = uniform_vertices[i].x;
-		cross_points[i*4+2].y = uniform_vertices[i].y;
-		cross_points[i*4+2].z = uniform_vertices[i].z+.01/cos(.7071);
-
-		cross_points[i*4+3].x = uniform_vertices[i].x;
-		cross_points[i*4+3].y = uniform_vertices[i].y;
-		cross_points[i*4+3].z = uniform_vertices[i].z-.01/cos(.7071);		
-	}
-
-glm::vec3 six_points[101*101*6];
-	for (auto i=0; i < 101*101; i+=1) {
+	for (auto i=0; i < num_loaded_points; i+=1) {
 		six_points[i*6].x = uniform_vertices[i].x+.01;
 		six_points[i*6].y = uniform_vertices[i].y;
 		six_points[i*6].z = uniform_vertices[i].z;
+		six_points_color[i*6] = uniform_color[i];
 
 		six_points[i*6+1].x = uniform_vertices[i].x-.01;
 		six_points[i*6+1].y = uniform_vertices[i].y;
 		six_points[i*6+1].z = uniform_vertices[i].z;
+		six_points_color[i*6+1] = uniform_color[i];
 
 		six_points[i*6+2].x = uniform_vertices[i].x;
 		six_points[i*6+2].y = uniform_vertices[i].y+.01;
 		six_points[i*6+2].z = uniform_vertices[i].z;
+		six_points_color[i*6+2] = uniform_color[i];
 
 		six_points[i*6+3].x = uniform_vertices[i].x;
 		six_points[i*6+3].y = uniform_vertices[i].y-.01;
-		six_points[i*6+3].z = uniform_vertices[i].z;		
+		six_points[i*6+3].z = uniform_vertices[i].z;
+		six_points_color[i*6+3] = uniform_color[i];		
 
 		six_points[i*6+4].x = uniform_vertices[i].x;
 		six_points[i*6+4].y = uniform_vertices[i].y;
 		six_points[i*6+4].z = uniform_vertices[i].z+.01;
+		six_points_color[i*6+4] = uniform_color[i];
 
 		six_points[i*6+5].x = uniform_vertices[i].x;
 		six_points[i*6+5].y = uniform_vertices[i].y;
 		six_points[i*6+5].z = uniform_vertices[i].z-.01;
+		six_points_color[i*6+5] = uniform_color[i];
 
 	}
 
@@ -205,20 +189,27 @@ glm::vec3 six_points[101*101*6];
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	/* Draw the grid using the indices to our vertices using our vertex buffer objects */
-	glEnableVertexAttribArray(attribute_coord2d);
+	glEnableVertexAttribArray(attribute_coord3d);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glVertexAttribPointer(attribute_coord2d, 3, GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribPointer(attribute_coord3d, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glDrawArrays(GL_LINES, 0, 101 * 101 * 6);
+	glDrawArrays(GL_LINES, 0, MAX_NUM_POINTS * 6);
 
+	// COLOR
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glBufferData(GL_ARRAY_BUFFER, sizeof six_points_color, six_points_color, GL_STATIC_DRAW);
+
+	glEnableVertexAttribArray(uniform_v_color);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
+	glVertexAttribPointer(uniform_v_color, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
 	// glUniform1f(uniform_sprite, plus_sprite.width);
 	// glDrawElements(GL_POINTS, 100 * 101 * 4, GL_UNSIGNED_SHORT, 0);
 
 	/* Stop using the vertex buffer object */
-	glDisableVertexAttribArray(attribute_coord2d);
+	glDisableVertexAttribArray(attribute_coord3d);
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
@@ -229,7 +220,7 @@ void special(int key, int x, int y) {
 	switch (key) {
 	case GLUT_KEY_F1:
 		sprite_mode = 0;
-		printf("Using sprint 0\n");
+		printf("Quick Exit\n");
 		exit(0);
 		break;
 	case GLUT_KEY_F2:
@@ -267,9 +258,9 @@ void special(int key, int x, int y) {
 		scale /= 1.5;
 		break;
 	case GLUT_KEY_HOME:
-		offset_x = 0.0;
-		offset_y = 0.0;
-		scale = 1.0;
+		printf("Resetting View\n");
+		camera_pos = reset_camera_pos;
+		camera_look = reset_camera_look;
 		break;
 	// case GLUT_KEY_
 	}
@@ -304,26 +295,81 @@ void init_plotting(int argc, char *argv[]) {
 
 
 // Capture the start x,y positions so we can calculate camera motion
-bool camera_enabled{false};
+bool rotate_enabled{false};
+bool pan_enabled{false};
+bool zoom_enabled{false};
 int x_start;
 int y_start;
+float radius_change{0.0f};
 void mouse(int button, int state, int x, int y) {
 
+	// Enable or disable rotation based on left button
 	if (button == GLUT_LEFT_BUTTON) {
 
 		if (state == GLUT_DOWN)   {
 
 			x_start = x;
 			y_start = y;
-			camera_enabled = true;
+			rotate_enabled = true;
 
 		} else if (state == GLUT_UP) {
 
-			camera_enabled = false;
+			rotate_enabled = false;
 
 		}
 
 	}
+
+	// Enable or disable pan based on right button
+	else if (button == GLUT_RIGHT_BUTTON) {
+		printf("Panning\n");
+
+		if (state == GLUT_DOWN)   {
+
+			x_start = x;
+			y_start = y;
+			pan_enabled = true;
+
+		} else if (state == GLUT_UP) {
+
+			pan_enabled = false;
+
+		}
+
+	}
+
+	// scroll up (zoom out)
+	else if (button == 3) {
+		radius_change = 0.03;
+		zoom_enabled = true;
+	} 
+	// scroll down (zoom in)
+	else if (button == 4) {
+		radius_change = -0.32;
+		zoom_enabled = true;
+	}
+
+	// Calculate Zooming
+	if (zoom_enabled) {
+
+		float radius = distance(camera_pos, camera_look);
+		float horizontal_radius = h_distance(camera_pos, camera_look);
+
+		radius += radius_change;
+		radius_change = 0;
+
+		float azimuth = atan2(camera_pos.y - camera_look.y, camera_pos.x - camera_look.x);
+		float elevation = atan2( (camera_pos.z - camera_look.z) , horizontal_radius);
+
+
+		camera_pos.x = cos(azimuth)*(radius*cos(elevation)) + camera_look.x;
+		camera_pos.y = sin(azimuth)*(radius*cos(elevation)) + camera_look.y;
+		camera_pos.z = sin(elevation)*radius + camera_look.z;
+
+		zoom_enabled = false;
+	}
+
+
 
 }
 
@@ -331,40 +377,110 @@ float camera_vertical_delta{0.0f};
 float camera_horizontal_delta{0.0f};
 void motion(int x, int y) {
 
-	if (camera_enabled) {
-		
-		camera_vertical_delta = (y_start - y) / 50.0f;
-		camera_horizontal_delta = (x_start - x) / 50.0f;
-
-// printf("%f %f\n", camera_vertical_delta, camera_horizontal_delta);
-
+	if (rotate_enabled) {
 		float radius = distance(camera_pos, camera_look);
 		float horizontal_radius = h_distance(camera_pos, camera_look);
 
 
 		float azimuth = atan2(camera_pos.y - camera_look.y, camera_pos.x - camera_look.x);
 		float elevation = atan2( (camera_pos.z - camera_look.z) , horizontal_radius);
+		
+		camera_vertical_delta = (y_start - y) / 50.0f;
+		camera_horizontal_delta = (x_start - x) / 50.0f;
 
 		azimuth += camera_horizontal_delta;
 		elevation += camera_vertical_delta;
 
+		x_start = x;
+		y_start = y;
 
 		camera_pos.x = cos(azimuth)*(radius*cos(elevation)) + camera_look.x;
 		camera_pos.y = sin(azimuth)*(radius*cos(elevation)) + camera_look.y;
 		camera_pos.z = sin(elevation)*radius + camera_look.z;
 
-		x_start = x;
-		y_start = y;
 
-	} else {
-		camera_horizontal_delta = 0.0f;
-		camera_vertical_delta = 0.0f;
-	}
+	} 
+	
 
+	else if (pan_enabled) {
+
+		float radius = distance(camera_pos, camera_look);
+		float horizontal_radius = h_distance(camera_pos, camera_look);
+		float azimuth = atan2(camera_pos.y - camera_look.y, camera_pos.x - camera_look.x);
+		float elevation = atan2( (camera_pos.z - camera_look.z) , horizontal_radius);
+
+		/** Vertical component **/
+		glm::vec3 B;
+
+		// XZ rotation
+		B.x = cos(elevation + M_PI/2);
+		B.y = 0.0f;
+		B.z = sin(elevation + M_PI/2);
+
+		// XY Rotation
+		B.x = cos(azimuth)*B.x;
+		B.y = sin(azimuth)*B.x;
+
+		B = glm::normalize(B);
+
+		/** Horizontal Component **/
+
+		glm::vec3 C;
+
+		// XY Rotation
+		C.x = cos(azimuth + M_PI/2);
+		C.y = sin(azimuth + M_PI/2);
+		C.z = 0.0f;
+
+		// XZ Rotation
+		C.x = cos(elevation)*C.x;
+		C.z = sin(elevation)*C.x;
+
+		C = glm::normalize(C);
+
+		camera_vertical_delta = (y_start - y);
+		camera_horizontal_delta = (x_start - x);
+
+		float total_delta = abs(camera_vertical_delta) + abs(camera_horizontal_delta);
+
+		if (total_delta > 0) {
+			glm::vec3 pan_delta;
+
+			pan_delta = B * ( -camera_vertical_delta / total_delta ) + C * ( camera_horizontal_delta / total_delta);
+
+			pan_delta *= radius / 200.0f;
+
+			printf("%f %f %f   ---   %f %f\n", pan_delta.x, pan_delta.y, pan_delta.z, azimuth, elevation);
+
+			x_start = x;
+			y_start = y;
+
+			camera_pos += pan_delta;
+			camera_look += pan_delta;
+
+		}
+
+		
+
+	} 
+	
 }
 
+// If no color is supplied make it white and call the real function
+void plot(std::vector<glm::vec3> vertices) {
 
-void plot(glm::vec3 verticies[101*101]) {
+	std::vector<glm::vec4> v_color;
+
+	for (auto i=0; i < vertices.size(); ++i) {
+		glm::vec4 boring_color(1,1,1,1);
+
+		v_color.push_back(boring_color);
+	}
+
+	plot(vertices, v_color);
+}
+
+void plot(std::vector<glm::vec3> verticies, std::vector<glm::vec4> v_color) {
 
 
 	GLint max_units;
@@ -375,8 +491,10 @@ void plot(glm::vec3 verticies[101*101]) {
 		exit(-1);
 	}
 
+	num_loaded_points = verticies.size();
 
-	if (init_resources(verticies)) {
+
+	if (init_resources(verticies, v_color)) {
 
 		// Transparency for sprites
 		glEnable(GL_BLEND);
