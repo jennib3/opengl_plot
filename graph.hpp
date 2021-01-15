@@ -20,6 +20,7 @@ void plot(std::vector<glm::vec3> vertices, std::vector<glm::vec4> v_color);
 void update_display(std::vector<glm::vec3> vertices);
 void update_display(std::vector<glm::vec3> vertices, std::vector<glm::vec4> v_color);
 
+void point_size(float point_length);
 
 void display();
 

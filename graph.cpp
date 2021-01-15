@@ -38,6 +38,11 @@ bool interpolate = false;
 bool clamp = false;
 bool rotate = false;
 
+float point_length{0.01};
+void point_size(float pl) {
+	point_length = pl;
+}
+
 float h_distance(glm::vec3 camera_position, glm::vec3 camera_look_at) {
 
     return sqrt( pow(camera_position.x - camera_look_at.x, 2) + 
@@ -138,34 +143,34 @@ void display() {
 	glm::vec4 six_points_color[MAX_NUM_POINTS*6];
 
 	for (auto i=0; i < num_loaded_points; i+=1) {
-		six_points[i*6].x = uniform_vertices[i].x+.01;
+		six_points[i*6].x = uniform_vertices[i].x+point_length;
 		six_points[i*6].y = uniform_vertices[i].y;
 		six_points[i*6].z = uniform_vertices[i].z;
 		six_points_color[i*6] = uniform_color[i];
 
-		six_points[i*6+1].x = uniform_vertices[i].x-.01;
+		six_points[i*6+1].x = uniform_vertices[i].x-point_length;
 		six_points[i*6+1].y = uniform_vertices[i].y;
 		six_points[i*6+1].z = uniform_vertices[i].z;
 		six_points_color[i*6+1] = uniform_color[i];
 
 		six_points[i*6+2].x = uniform_vertices[i].x;
-		six_points[i*6+2].y = uniform_vertices[i].y+.01;
+		six_points[i*6+2].y = uniform_vertices[i].y+point_length;
 		six_points[i*6+2].z = uniform_vertices[i].z;
 		six_points_color[i*6+2] = uniform_color[i];
 
 		six_points[i*6+3].x = uniform_vertices[i].x;
-		six_points[i*6+3].y = uniform_vertices[i].y-.01;
+		six_points[i*6+3].y = uniform_vertices[i].y-point_length;
 		six_points[i*6+3].z = uniform_vertices[i].z;
 		six_points_color[i*6+3] = uniform_color[i];		
 
 		six_points[i*6+4].x = uniform_vertices[i].x;
 		six_points[i*6+4].y = uniform_vertices[i].y;
-		six_points[i*6+4].z = uniform_vertices[i].z+.01;
+		six_points[i*6+4].z = uniform_vertices[i].z+point_length;
 		six_points_color[i*6+4] = uniform_color[i];
 
 		six_points[i*6+5].x = uniform_vertices[i].x;
 		six_points[i*6+5].y = uniform_vertices[i].y;
-		six_points[i*6+5].z = uniform_vertices[i].z-.01;
+		six_points[i*6+5].z = uniform_vertices[i].z-point_length;
 		six_points_color[i*6+5] = uniform_color[i];
 
 	}

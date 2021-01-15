@@ -77,6 +77,8 @@ void update_data() {
 
 	}
 
+	point_size( 0.03*(scaling + 1) );
+
 
 
 	update_display(data, d_color); // Renders per point with specified color
@@ -85,7 +87,5 @@ void update_data() {
 }
 
 // Next steps
-// Change data format to allow per-point coloring
-// Change point sizes
 // Change where lines are calculated to ease computational overhead
 // On screen drawing for points instead of "3d"
