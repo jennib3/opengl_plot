@@ -77,7 +77,7 @@ void update_data() {
 
 	}
 
-	point_size( 0.03*(scaling + 1) );
+	// point_size( 0.03*(scaling + 1) );
 
 
 

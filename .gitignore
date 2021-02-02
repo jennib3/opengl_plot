@@ -1,4 +1,5 @@
 graph
 shader_utils/shader_utils.o
 example_1
+example_object
 .vscode/
