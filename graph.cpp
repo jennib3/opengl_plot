@@ -30,12 +30,12 @@ GLint attribute_coord3d_faces;
 GLint uniform_vertex_transform_faces;
 GLint uniform_v_color_faces;
 
-glm::vec3 uniform_vertices[MAX_NUM_POINTS];
-glm::vec4 uniform_color[MAX_NUM_POINTS];
+glm::vec3* uniform_vertices = new glm::vec3[2*MAX_NUM_POINTS];
+glm::vec4* uniform_color = new glm::vec4[2*MAX_NUM_POINTS];
 
-glm::vec3 uniform_face_vertices[MAX_NUM_POINTS];
-glm::vec4 uniform_face_color[MAX_NUM_POINTS];
-glm::vec3 uniform_face[MAX_NUM_POINTS];
+glm::vec3* uniform_face_vertices = new glm::vec3[MAX_NUM_POINTS];
+glm::vec4* uniform_face_color = new glm::vec4[MAX_NUM_POINTS];
+glm::vec3* uniform_face = new glm::vec3[MAX_NUM_POINTS];
 
 int sprite_mode{0};
 
@@ -97,6 +97,11 @@ int init_resources(std::vector<glm::vec3> vertices, std::vector<glm::vec4> v_col
 
 uint num_loaded_points{0};
 
+// Prevent faces from stoping on regular points for the first render
+void preallocate_vertices(uint num) {
+	num_loaded_points = num;
+}
+
 void update_display(std::vector<glm::vec3> vertices) {
 	std::vector<glm::vec4> v_color;
 
@@ -155,47 +160,8 @@ void display() {
  	model = glm::mat4(1.0f);
 
 
-	glm::vec3 six_points[MAX_NUM_POINTS*6 + MAX_NUM_POINTS*3];
-	glm::vec4 six_points_color[MAX_NUM_POINTS*6 + MAX_NUM_POINTS*3];
 
-	// Load cross points into buffer
-
-	for (auto i=0; i < num_loaded_points; i+=1) {
-		six_points[i*6].x = uniform_vertices[i].x+point_length;
-		six_points[i*6].y = uniform_vertices[i].y;
-		six_points[i*6].z = uniform_vertices[i].z;
-		six_points_color[i*6] = uniform_color[i];
-
-		six_points[i*6+1].x = uniform_vertices[i].x-point_length;
-		six_points[i*6+1].y = uniform_vertices[i].y;
-		six_points[i*6+1].z = uniform_vertices[i].z;
-		six_points_color[i*6+1] = uniform_color[i];
-
-		six_points[i*6+2].x = uniform_vertices[i].x;
-		six_points[i*6+2].y = uniform_vertices[i].y+point_length;
-		six_points[i*6+2].z = uniform_vertices[i].z;
-		six_points_color[i*6+2] = uniform_color[i];
-
-		six_points[i*6+3].x = uniform_vertices[i].x;
-		six_points[i*6+3].y = uniform_vertices[i].y-point_length;
-		six_points[i*6+3].z = uniform_vertices[i].z;
-		six_points_color[i*6+3] = uniform_color[i];		
-
-		six_points[i*6+4].x = uniform_vertices[i].x;
-		six_points[i*6+4].y = uniform_vertices[i].y;
-		six_points[i*6+4].z = uniform_vertices[i].z+point_length;
-		six_points_color[i*6+4] = uniform_color[i];
-
-		six_points[i*6+5].x = uniform_vertices[i].x;
-		six_points[i*6+5].y = uniform_vertices[i].y;
-		six_points[i*6+5].z = uniform_vertices[i].z-point_length;
-		six_points_color[i*6+5] = uniform_color[i];
-
-	}
-
-
-
-	glm::mat4 projection = glm::perspective(45.0f, 1.0f * 640 / 480, 0.1f, 10.0f);
+	glm::mat4 projection = glm::perspective(45.0f, 1.0f * 640 / 480, 0.1f, 100.0f);
 	glm::mat4 vertex_transform = projection * view * model;
 	glUniformMatrix4fv(uniform_vertex_transform, 1, GL_FALSE, glm::value_ptr(vertex_transform));
 
@@ -203,18 +169,24 @@ void display() {
 	glClearDepth(10.0f);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+
+	auto total_num_vertices = num_loaded_points;
+	// printf("Num points: %i\n",num_loaded_points);
 	if (draw_faces) {
 
+		// printf("Num faces: %i\n",num_faces);
 		for (auto i=0; i < num_faces; i+=1) {
 
-			six_points[i*3 + num_loaded_points*6] = uniform_face_vertices[int(uniform_face[i].x)];
-			six_points_color[i*3 + num_loaded_points*6] = uniform_face_color[i];
+			// printf("Index: %i ", i*3 + num_loaded_points);
 
-			six_points[i*3+1 + num_loaded_points*6] = uniform_face_vertices[int(uniform_face[i].y)];
-			six_points_color[i*3+1 + num_loaded_points*6] = uniform_face_color[i];
+			uniform_vertices[i*3 + num_loaded_points] = uniform_face_vertices[int(uniform_face[i].x)];
+			uniform_color[i*3 + num_loaded_points] = uniform_face_color[i];
 
-			six_points[i*3+2 + num_loaded_points*6] =  uniform_face_vertices[int(uniform_face[i].z)];
-			six_points_color[i*3+2 + num_loaded_points*6] = uniform_face_color[i];
+			uniform_vertices[i*3+1 + num_loaded_points] = uniform_face_vertices[int(uniform_face[i].y)];
+			uniform_color[i*3+1 + num_loaded_points] = uniform_face_color[i];
+
+			uniform_vertices[i*3+2 + num_loaded_points] =  uniform_face_vertices[int(uniform_face[i].z)];
+			uniform_color[i*3+2 + num_loaded_points] = uniform_face_color[i];
 
 			// printf(" %i %i %i\n", int(uniform_face[i].x), int(uniform_face[i].y), int(uniform_face[i].z));
 			// printf("%f %f %f %f\n", six_points_color[i*3+2 + num_loaded_points*6].r, six_points_color[i*3+2 + num_loaded_points*6].g, six_points_color[i*3+2 + num_loaded_points*6].b, six_points_color[i*3+2 + num_loaded_points*6].a);
@@ -223,34 +195,33 @@ void display() {
 
 		// printf(" num loaded points: %i final index %i num faces %i start index %i final index %i\n", num_loaded_points, (num_loaded_points-1)*6+5, num_faces, num_loaded_points*6, num_loaded_points*6 + num_faces*3);
 
+
+		total_num_vertices += num_faces*3;
 	}
 
+	// printf("Num total_num_vertices: %i\n",total_num_vertices);
 
+
+	glEnable(GL_PROGRAM_POINT_SIZE);
+	glEnableVertexAttribArray(attribute_coord3d);
 
 	// Tell OpenGL to copy our array to the buffer objects
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof six_points, six_points, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(uniform_vertices)*(total_num_vertices), &uniform_vertices[0], GL_STATIC_DRAW);
 
-
-	/* Draw the 6-point symbol */
-	glEnableVertexAttribArray(attribute_coord3d);
-
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
 	glVertexAttribPointer(attribute_coord3d, 3, GL_FLOAT, GL_FALSE, 0, 0);
 
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glDrawArrays(GL_LINES, 0, num_loaded_points*6);
+	// Draw the points
+	glDrawArrays(GL_POINTS, 0, num_loaded_points);
 
 	// Draw the triangles
-	// glBindBuffer(GL_ARRAY_BUFFER, vbo[0]);
-	glDrawArrays(GL_TRIANGLES, num_loaded_points*6, num_faces*3); 
+	glDrawArrays(GL_TRIANGLES, num_loaded_points, num_faces*3); 
 
 	// COLOR
 	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
-	glBufferData(GL_ARRAY_BUFFER, sizeof six_points_color, six_points_color, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(uniform_color)*total_num_vertices, &uniform_color[0], GL_STATIC_DRAW);
 
 	glEnableVertexAttribArray(uniform_v_color);
-	glBindBuffer(GL_ARRAY_BUFFER, vbo[1]);
 	glVertexAttribPointer(uniform_v_color, 4, GL_FLOAT, GL_FALSE, 0, 0);
 
 
@@ -261,6 +232,7 @@ void display() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
 	glutSwapBuffers();
+
 }
 
 void special(int key, int x, int y) {
@@ -437,7 +409,7 @@ void motion(int x, int y) {
 		float azimuth = atan2(camera_pos.y - camera_look.y, camera_pos.x - camera_look.x);
 		float elevation = atan2( (camera_pos.z - camera_look.z) , horizontal_radius);
 		
-		camera_vertical_delta = (y_start - y) / 50.0f;
+		camera_vertical_delta = -(y_start - y) / 50.0f;
 		camera_horizontal_delta = (x_start - x) / 50.0f;
 
 		azimuth += camera_horizontal_delta;
@@ -558,7 +530,7 @@ void plot(std::vector<glm::vec3> verticies, std::vector<glm::vec4> v_color) {
 		glEnable(GL_DEPTH_TEST);
 		glDepthMask(GL_TRUE);
 		glDepthFunc(GL_LEQUAL);
-		glDepthRange(0.0f, 10.0f);
+		glDepthRange(-1.0f, 1.0f);
 
 
 		glutDisplayFunc(display);

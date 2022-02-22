@@ -20,7 +20,8 @@
 void load_obj_file(const char* path, 
                 std::vector<std::vector< glm::vec3 >> &out_vertices,
                 std::vector<std::vector< glm::vec3 >> &out_faces,
-                std::vector< std::string> &out_names) {
+                std::vector< std::string> &out_names,
+                std::vector<glm::vec3> &out_flattened) {
 
     std::vector< unsigned int > vertexIndices, uvIndices, normalIndices;
     std::vector< glm::vec2 > temp_uvs;
@@ -80,6 +81,7 @@ void load_obj_file(const char* path,
             fscanf(file, "%f %f %f\n", &vertex.x, &vertex.z, &vertex.y );
             vertex.y = -vertex.y;
             temp_vertices.push_back(vertex);
+            out_flattened.push_back(vertex);
 
         // If we found a new vertex texture
         } else if ( strcmp( lineHeader, "vt" ) == 0 ){
